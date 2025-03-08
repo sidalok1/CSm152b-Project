@@ -18,8 +18,6 @@ module conv2d
 		out
 	);
 
-	//$display("Instantiating %d input channels of uint%d matrices size %dx%d"
-	//	,in_channels, data_size, cols, rows);
 	input [
 		(((rows * cols) * in_channels) * data_size) - 1
 		:
@@ -30,8 +28,6 @@ module conv2d
 		(rows - kernel_rows + pad_rows + stride_row) / stride_row;
 	localparam output_cols = 
 		(cols - kernel_cols + pad_cols + stride_col) / stride_col;
-	//$display("Instantiating %d output channels of size %dx%d"
-	//	,out_channels, output_cols, output_rows);
 	output reg signed [
 		(((output_rows * output_cols) * out_channels) * data_size) - 1
 		:
@@ -41,29 +37,12 @@ module conv2d
 	genvar i, j, ci, co;
 	generate
 		
-		
-		//$display("Instantiating %d kernels for every %d input channels of size %dx%d"
-		//	,out_channels, in_channels, kernel_cols, kernel_rows);
 		reg signed [data_size-1:0] kernels [0:in_channels-1][0:out_channels-1][0:kernel_rows-1][0:kernel_cols-1];
 
-		if (bias == 0) 
-			begin
-				//$display("Bias not asserted, setting bias to zero");
-				wire [data_size-1:0] biases [0:in_channels-1][0:out_channels-1];
-				for (i = 0; i < in_channels; i = i + 1)
-					for (j = 0; j < out_channels; j = j + 1)
-						assign biases[i][j] = 0;
-			end
-		else
-			begin
-				//$display("Instantiating bias registers");
-				reg [data_size-1:0] biases [0:in_channels-1][0:out_channels-1];
-			end
+		reg [data_size-1:0] biases [0:in_channels-1][0:out_channels-1];
 
 		wire signed [data_size-1:0] padded_inputs [0:in_channels-1][0:(rows + (2 * pad_rows))-1][0:(cols + (2 * pad_cols))-1];
 
-		//Assign input matrices from inputs
-		//$display("Padding input matrices");
 		for (ci = in_channels - 1; ci >= 0; ci = ci - 1) begin
 			for (j = (rows + (2 * pad_rows)) - 1; j >= 0; j = j - 1) begin
 			for (i = (cols + (2 * pad_cols)) - 1; i >= 0; i = i - 1) begin
@@ -98,7 +77,16 @@ module conv2d
 
 	reg signed [(data_size*2)-1:0] current;
 
-	initial $readmemh("./mem/kern.mem", kernels);
+	initial begin
+		$readmemh("./mem/kern.mem", kernels);
+		if (bias == 0) 
+			begin
+				for (idx = 0; idx < in_channels; idx = idx + 1) begin
+				for (jdx = 0; jdx < out_channels; jdx = jdx + 1) begin
+					biases[idx][jdx] = 0;
+				end end
+			end
+	end
 
 	always @* begin
 		for (cjdx = out_channels - 1; cjdx >= 0; cjdx = cjdx - 1) begin
@@ -110,11 +98,11 @@ module conv2d
 			for (idx = output_cols - 1; idx >= 0; idx = idx - 1) begin
 				$display("\tCol: %d", idx);
 				ind = (((cjdx * (output_rows * output_cols)) + (jdx * (output_rows)) + idx)	* data_size) + data_size - 1;
-				current = bias[cidx][cjdx];
+				current = biases[cidx][cjdx];
 				for (kjdx = kernel_rows - 1; kjdx >= 0; kjdx = kjdx - 1) begin
 				for (kidx = kernel_cols - 1; kidx >= 0; kidx = kidx - 1) begin
 						$display("\t%d * %d", padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx], kernels[cidx][cjdx][(kernel_rows-1)-kjdx][(kernel_cols-1)-kidx]);
-						current += 
+						current = current + 
 							padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx] 
 								* 
 							kernels[cidx][cjdx] [(kernel_rows-1)-kjdx][(kernel_cols-1)-kidx];
