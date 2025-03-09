@@ -1,12 +1,12 @@
 module display(
     input               disp_clk, 
-    input       [7:0]   din,
+    input signed[7:0]   din,
     input               en, 
     output  reg [3:0]   anodes,
     output      [6:0]   segment
     );
     
-    
+    reg                 sign;
     reg         [15:0]  num;
     reg         [1:0]   cnt;
     reg         [3:0]   currentNum;
@@ -16,12 +16,22 @@ module display(
     initial begin
         cnt = 2'b00;
         num = 16'b0;
+        sign = 0;
     end
 
     always @ (posedge disp_clk) begin 
         cnt <= cnt + 1;
 
-        if (en) num <= din;
+        if (en) begin 
+            if (din >= 0) begin
+                num <= din;
+                sign <= 0;
+            end
+            else begin
+                num <= ~din + 1;
+                sign <= 1;
+            end
+        end
 
         case (cnt)
             2'b00: begin
@@ -38,7 +48,10 @@ module display(
             end
             2'b11: begin
                 anodes <= 4'b0111;
-                currentNum <= num / 1000;
+                if (sign)
+                    currentNum <= 4'hff;
+                else
+                    currentNum <= num / 1000;
             end
         endcase
     end
@@ -61,6 +74,7 @@ module DecimalDecoder(bin, cathodes);
             4'd7:       cathodes = 7'b1111000;
             4'd8:       cathodes = 7'b0000000;
             4'd9:       cathodes = 7'b0011000;
+            4'hff:      cathodes = 7'b0111111;
             default:    cathodes = 7'b1000000;
         endcase
     end

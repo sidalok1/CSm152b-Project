@@ -8,15 +8,11 @@ module conv2d
 		stride_col=1,
 		pad_rows=0,
 		pad_cols=0,
-		bias=1,
 		rows=27,
 		cols=27,
 		data_size=8
 	)
-	(
-		in,
-		out
-	);
+	( in );
 
 	input [
 		(((rows * cols) * in_channels) * data_size) - 1
@@ -28,7 +24,7 @@ module conv2d
 		(rows - kernel_rows + pad_rows + stride_row) / stride_row;
 	localparam output_cols = 
 		(cols - kernel_cols + pad_cols + stride_col) / stride_col;
-	output reg signed [
+	reg signed [
 		(((output_rows * output_cols) * out_channels) * data_size) - 1
 		:
 		0
@@ -78,14 +74,10 @@ module conv2d
 	reg signed [(data_size*2)-1:0] current;
 
 	initial begin
-		$readmemh("./mem/kern.mem", kernels);
-		if (bias == 0) 
-			begin
-				for (idx = 0; idx < in_channels; idx = idx + 1) begin
-				for (jdx = 0; jdx < out_channels; jdx = jdx + 1) begin
-					biases[idx][jdx] = 0;
-				end end
-			end
+		for (idx = 0; idx < in_channels; idx = idx + 1) begin
+		for (jdx = 0; jdx < out_channels; jdx = jdx + 1) begin
+			biases[idx][jdx] = 0;
+		end end
 	end
 
 	always @* begin
