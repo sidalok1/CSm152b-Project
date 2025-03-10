@@ -8,11 +8,11 @@ module conv2d
 		stride_col=1,
 		pad_rows=0,
 		pad_cols=0,
-		rows=27,
-		cols=27,
+		rows=28,
+		cols=28,
 		data_size=8
 	)
-	( in );
+	( in, out );
 
 	input [
 		(((rows * cols) * in_channels) * data_size) - 1
@@ -24,7 +24,7 @@ module conv2d
 		(rows - kernel_rows + pad_rows + stride_row) / stride_row;
 	localparam output_cols = 
 		(cols - kernel_cols + pad_cols + stride_col) / stride_col;
-	reg signed [
+	output reg signed [
 		(((output_rows * output_cols) * out_channels) * data_size) - 1
 		:
 		0

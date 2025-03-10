@@ -13,10 +13,10 @@ Note that passing (packed) arrays as parameters is supported only in
 SystemVerilog
 */
 
-module #(
+module clock #(
     parameter           num_clks=0,     //Default: generate only one 1hz clock out
     parameter integer   frequencies     [num_clks-1:0] //Should be specified in megaherts
-) clock (
+) (
     input                       rst,
     input                       sysclk,
     output reg [num_clks:0]     clk
@@ -27,9 +27,10 @@ module #(
     reg [$clog2(basys_cc)-1:0]  counter;
     
     integer i;
+    genvar idx;
     generate
-        for ( i = 0; i < num_clks; i = i + 1 )
-            assign dividers[i] = basys_cc / (2 * frequencies[i]);
+        for ( idx = 0; idx < num_clks; idx = idx + 1 )
+            assign dividers[idx] = basys_cc / (2 * frequencies[idx]);
         assign dividers[num_clks] = basys_cc / 2;
     endgenerate
 
@@ -38,14 +39,18 @@ module #(
         clk = 0;
     end
 
-    always @( posedge sysclk, posedge rst ) begin
-        if (counter == dividers[num_clks] ) begin
+    always @( posedge sysclk ) begin
+        if (rst) begin
+            counter <= 0;
+            clk <= 0;
+        end
+        else if (counter == dividers[num_clks] ) begin
             clk <= ~clk;
             counter <= 0;
         end
         else begin
             counter <= counter + 1;
-            for ( i = 0; i < num_clks < i = i + 1 )
+            for ( i = 0; i < num_clks; i = i + 1 )
                 if ( (counter % dividers[i]) == 0 )
                     clk[i] <= ~clk[i];
         end

@@ -49,7 +49,7 @@ module display(
             2'b11: begin
                 anodes <= 4'b0111;
                 if (sign)
-                    currentNum <= 4'hff;
+                    currentNum <= 4'hf;
                 else
                     currentNum <= num / 1000;
             end
@@ -74,7 +74,7 @@ module DecimalDecoder(bin, cathodes);
             4'd7:       cathodes = 7'b1111000;
             4'd8:       cathodes = 7'b0000000;
             4'd9:       cathodes = 7'b0011000;
-            4'hff:      cathodes = 7'b0111111;
+            4'hf:       cathodes = 7'b0111111;
             default:    cathodes = 7'b1000000;
         endcase
     end
