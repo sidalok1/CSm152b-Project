@@ -3,36 +3,21 @@ Parameterized clock divider module for Basys 3 (or any 100 mhz PLD)
 
 If no parameters are passed, then output register is a 1 hz clock.
 
-Otherwise, pass the number of clocks desired as num_clks parameter.
-Also, pass an array of integers (parameter frequencies) the desired
-frequency of each clock. For N desired clocks, this array should be
-[N-1:0]. The clk output register will be [N:0], with clk[N] being a
-1 hz clock always.
-
-Note that passing (packed) arrays as parameters is supported only in
-SystemVerilog
+Instantiates a single output clock at the frequency given by the
+frequency param
 */
 
 module clock #(
-    parameter           num_clks=0,     //Default: generate only one 1hz clock out
-    parameter integer   frequencies     [num_clks-1:0] //Should be specified in megaherts
+    parameter   num_clks=0,     //Default: generate only one 1hz clock out
+    parameter   frequency=1     
 ) (
-    input                       rst,
-    input                       sysclk,
-    output reg [num_clks:0]     clk
+    input       rst,
+    input       sysclk,
+    output reg  clk
 );
     localparam                  basys_cc = 100_000_000;
-    
-    wire integer                dividers [num_clks:0];
-    reg [$clog2(basys_cc)-1:0]  counter;
-    
-    integer i;
-    genvar idx;
-    generate
-        for ( idx = 0; idx < num_clks; idx = idx + 1 )
-            assign dividers[idx] = basys_cc / (2 * frequencies[idx]);
-        assign dividers[num_clks] = basys_cc / 2;
-    endgenerate
+    localparam                  divider = basys_cc / (2 * frequency);
+    reg [$clog2(divider)-1:0]  counter;
 
     initial begin
         counter = 0;
@@ -44,16 +29,11 @@ module clock #(
             counter <= 0;
             clk <= 0;
         end
-        else if (counter == dividers[num_clks] ) begin
+        else if (counter == divider ) begin
             clk <= ~clk;
             counter <= 0;
         end
-        else begin
-            counter <= counter + 1;
-            for ( i = 0; i < num_clks; i = i + 1 )
-                if ( (counter % dividers[i]) == 0 )
-                    clk[i] <= ~clk[i];
-        end
+        else counter <= counter + 1;
     end
 
 endmodule

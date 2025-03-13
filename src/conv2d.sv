@@ -11,26 +11,17 @@ module conv2d
 		rows=28,
 		cols=28,
 		data_size=8
-	)
-	( in, out );
+	) (in, out);
 
-	input [
-		(((rows * cols) * in_channels) * data_size) - 1
-		:
-		0
-	] in;
+	input wire [`DATA_SIZE-1:0] in [0:in_channels-1][0:rows-1][0:cols-1];
 
 	localparam output_rows = 
 		(rows - kernel_rows + pad_rows + stride_row) / stride_row;
 	localparam output_cols = 
 		(cols - kernel_cols + pad_cols + stride_col) / stride_col;
-	output reg signed [
-		(((output_rows * output_cols) * out_channels) * data_size) - 1
-		:
-		0
-	] out;
+	output reg [data_size-1:0] out [0:out_channels-1][0:output_rows-1][0:output_cols-1];
 
-	genvar i, j, ci, co;
+	genvar i, j, ci, co, ki, kj;
 	generate
 		
 		reg signed [data_size-1:0] kernels [0:in_channels-1][0:out_channels-1][0:kernel_rows-1][0:kernel_cols-1];
@@ -45,7 +36,7 @@ module conv2d
 				if (i < pad_cols || i > (cols + pad_cols) || j < pad_rows || j > (rows + pad_rows))
 					assign padded_inputs[ci][j][i] = 0;
 				else
-					assign padded_inputs[ci][j][i] = in[((ci * rows * cols) + (j * rows) + i) * data_size +: data_size-1];
+					assign padded_inputs[ci][j][i] = in[ci][j][i];
 			end end
 		end
 	endgenerate
@@ -63,13 +54,12 @@ module conv2d
 		for (i = 0; i < rows; i = i + 1) begin:in_row
 		for (j = 0; j < cols; j = j + 1) begin:in_col
 				wire [data_size-1:0] inp;
-				assign inp = padded_inputs[ci][i][j];
+				assign inp = in[ci][i][j];
 		end end end
 	endgenerate
 
 	integer idx, cidx, kidx,
-			jdx, cjdx, kjdx, 
-			ind;
+			jdx, cjdx, kjdx;
 
 	reg signed [(data_size*2)-1:0] current;
 
@@ -89,7 +79,6 @@ module conv2d
 				$display("\tRow: %d", jdx);
 			for (idx = output_cols - 1; idx >= 0; idx = idx - 1) begin
 				$display("\tCol: %d", idx);
-				ind = (((cjdx * (output_rows * output_cols)) + (jdx * (output_rows)) + idx)	* data_size) + data_size - 1;
 				current = biases[cidx][cjdx];
 				for (kjdx = kernel_rows - 1; kjdx >= 0; kjdx = kjdx - 1) begin
 				for (kidx = kernel_cols - 1; kidx >= 0; kidx = kidx - 1) begin
@@ -99,7 +88,7 @@ module conv2d
 								* 
 							kernels[cidx][cjdx] [(kernel_rows-1)-kjdx][(kernel_cols-1)-kidx];
 				end end
-				out[ind -: data_size-1] = current[data_size-1:0];
+				out[cjdx][jdx][idx] = current;
 				$display("\t\t Value: %d", current);
 			end	end
 		end end

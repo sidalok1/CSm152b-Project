@@ -7,13 +7,20 @@ module basys (
 	output	[3:0]	an
 );
 	`include "params1.vh"
-	reg [input_bus_size-1:0] inputs [0:number_of_inputs-1];
+	reg [`DATA_SIZE-1:0] inputs [0:number_of_inputs-1][0:in_channels-1][0:in_size-1][0:in_size-1];
 
 	reg [number_of_inputs-1:0] input_index;
-	wire [input_bus_size-1:0] current_input;
-	assign current_input = inputs[input_index];
+	wire [`DATA_SIZE-1:0] current_input [0:in_channels-1][0:in_size-1][0:in_size-1];
+	genvar gi, gj, gk;
+	generate
+		for (gi = 0; gi < in_channels; gi = gi + 1) begin
+		for (gj = 0; gj < in_size; gj = gj + 1) begin
+		for (gk = 0; gk < in_size; gk = gk + 1) begin
+			assign current_input[gi][gj][gk] = inputs[input_index][gi][gj][gk];
+		end end end
+	endgenerate
 	
-	wire [(out_size * out_size * `DATA_SIZE) - 1 : 0] conv_out;
+	wire [`DATA_SIZE-1:0] conv_out [0:out_channels-1][0:out_size-1][0:out_size-1];
     
 	conv2d #(
 		in_channels,
@@ -27,24 +34,21 @@ module basys (
 		in_size,
 		in_size,
 		`DATA_SIZE
-	) UUT ( current_input, conv_out );
+	) UUT ( .in(current_input), .out(conv_out) );
 
 	
 
-	reg [$clog2(output_bus_elemets)-1:0] output_select;
-	wire [$clog2(output_bus_size)-1:0] output_index;
-
-	assign output_index = ((output_index + 1) * `DATA_SIZE) - 1;
+	integer i, j, k;
 
 	wire [7:0] conv_to_display;
 
-	assign conv_to_display = conv_out[output_index -: `DATA_SIZE - 1];
+	assign conv_to_display = conv_out[i][j][k];
 
-	wire d_clk, _;
+	wire d_clk;
 
-	clock #(1, {60}) clkdiv (0, clk, {d_clk, _});
+	clock #(1, 60) clkdiv (1'b0, clk, d_clk);
 
-	display sevseg (d_clk, conv_to_display, 1, an, seg);
+	display sevseg (d_clk, conv_to_display, 1'b1, an, seg);
 
 	wire next_in, prev_in, next_out, prev_out, reset;
 
@@ -58,13 +62,14 @@ module basys (
 	initial begin
 		$readmemh("./mem/in.mem", inputs);
 		$readmemh("./mem/kern.mem", UUT.kernels);
-		output_select = 0;
+		i = 0;
+		j = 0;
+		k = 0;
 		input_index = 0;
 	end
 
 	always @* begin
 		if (reset) begin
-			output_select = 0;
 			input_index = 0;
 		end 
 		else begin
@@ -73,10 +78,30 @@ module basys (
 			else if (prev_in && (input_index > 0))
 				input_index = input_index - 1;
 			
-			if (next_out && (output_select < output_bus_elemets))
-				output_select = output_select + 1;
-			else if (prev_out && (output_select > 0))
-				output_select = output_select - 1;
+			if (next_out)
+				if (k < out_size - 1)
+					k = k + 1;
+				else if (j < out_size - 1) begin
+					k = 0;
+					j = j + 1;
+				end
+				else if (i < out_channels - 1) begin
+					k = 0;
+					j = 0;
+					i = i + 1;
+				end
+			else if (prev_out)
+				if (k > 0)
+					k = k + 1;
+				else if (j > 0) begin
+					k = out_size - 1;
+					j = j + 1;
+				end
+				else if (i > 0) begin
+					k = out_size - 1;
+					j = out_size - 1;
+					i = i + 1;
+				end
 		end
 	end
 

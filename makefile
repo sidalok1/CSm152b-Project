@@ -4,8 +4,8 @@ default: .signals
 .signals: .sim
 	vvp .sim -l .log
 
-.sim: $(wildcard src/*) $(wildcard test/*) $(wildcard mem/*)
-	iverilog -y src -o .sim test/*.v
+.sim: $(wildcard src/*) $(wildcard test/*) $(wildcard mem/*) $(wildcard basys/*)
+	iverilog -g2012 -Y .sv -y basys -y src -o .sim test/*.sv
 
 $(wildcard src/*): src
 
