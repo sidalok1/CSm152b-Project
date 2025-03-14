@@ -2,10 +2,12 @@ default: .signals
 	gtkwave .signals save.gtkw
 
 .signals: .sim
+	cp mem/*.mem .
 	vvp .sim -l .log
+	rm -f *.mem
 
 .sim: $(wildcard src/*) $(wildcard test/*) $(wildcard mem/*) $(wildcard basys/*)
-	iverilog -g2012 -Y .sv -y basys -y src -o .sim test/*.sv
+	iverilog -g2012 -Y .sv -y basys -y src -y mem -o .sim test/*.sv
 
 $(wildcard src/*): src
 
@@ -26,5 +28,6 @@ clean:
 	rm -f .sim
 	rm -f .signals
 	rm -f .log
+	rm -f *.mem
 	
 .DELETE_ON_ERROR: clean
