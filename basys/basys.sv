@@ -7,17 +7,28 @@ module basys (
 );
 	`include "params1.vh"
 	//reg [`DATA_SIZE-1:0] inputs [0:number_of_inputs-1][0:(in_channels * (in_size ** 2))-1];
-	reg signed [`DATA_SIZE-1:0] inputs [0:(in_channels * (in_size ** 2))-1];
+	reg [`DATA_SIZE-1:0] inputs [0:(in_channels * (in_size ** 2))-1];
 
-	wire signed [`DATA_SIZE-1:0] current_input [0:in_channels-1][0:in_size-1][0:in_size-1];
+	wire [`DATA_SIZE-1:0] current_input [0:in_channels-1][0:in_size-1][0:in_size-1];
 	genvar ii, jj, kk;
 	generate
-		for (gi = 0; gi < in_channels; gi = gi + 1) begin
+	   for (ii = 0; ii < in_channels; ii = ii + 1) begin
+	   for (jj = 0; jj < in_size; jj = jj + 1) begin
+	   for (kk = 0; kk < in_size; kk = kk + 1) begin
+	       assign current_input[ii][jj][kk] = inputs[(ii * in_size * in_size) + (jj * in_size) + kk];
+	   end end end
+	endgenerate 
+	
+
+	/*always @( posedge clk ) begin
+	integer gi, gj, gk;
+		 for (gi = 0; gi < in_channels; gi = gi + 1) begin
 		for (gj = 0; gj < in_size; gj = gj + 1) begin
 		for (gk = 0; gk < in_size; gk = gk + 1) begin
-			assign current_input[gi][gj][gk] = inputs[input_index][gi][gj][gk];
-		end end end
-	endgenerate
+			current_input[gi][gj][gk] = inputs[input_index][gi][gj][gk];
+		end end end 
+		current_input = inputs[input_index +: (in_channels * (in_size ** 2)];
+	end*/
 	
 	wire signed [`DATA_SIZE-1:0] conv1_out [0:out_channels_1-1][0:out_size_1-1][0:out_size_1-1];
 	
@@ -95,38 +106,42 @@ module basys (
 
 	wire d_clk;
 
-	clock #(1, 60) clkdiv (1'b0, clk, d_clk);
+	clock #(1, 60*4) clkdiv (1'b0, clk, d_clk);
 
 	display sevseg (d_clk, conv_to_display, 1'b1, an, seg);
 
 	wire next_in, prev_in, next_out, prev_out, reset;
-
-	debounce 
-		bC (clk, btnC, reset),
-		bL (clk, btnL, prev_in),
-		bU (clk, btnU, prev_out),
-		bR (clk, btnR, next_in),
-		bD (clk, btnD, next_out);
+    reg _reset, _next_out, _prev_out;
+    wire rst, nxt, prv;
+    assign rst = reset & ~_reset;
+    assign nxt = next_out & ~_next_out;
+    assign prv = prev_out & ~_prev_out;
+	debounce #(8)
+		bC (d_clk, btnC, reset),
+		bL (d_clk, btnL, prev_in),
+		bU (d_clk, btnU, prev_out),
+		bR (d_clk, btnR, next_in),
+		bD (d_clk, btnD, next_out);
 
 	initial begin
-		$readmemh("in42_0-0.mem", inputs);
-		$readmemh("conv1_bias.mem", conv1.biases);
-		$readmemh("conv2_bias.mem", conv2.biases);
-		$readmemh("fc_bias.mem", fc.biases);
-		$readmemh("fc_weights.mem", fc.weight_mem);
-		`include "readmems.vh"
+		$readmemh("in.mem", inputs);
+		$readmemh("kern.mem", conv1.kernels);
 		_reset = 0;
 		_next_out = 0;
 		_prev_out = 0;
 		i = 0;
 		j = 0;
 		k = 0;
-		input_index = 0;
 	end
 
-	always @* begin
-		if (reset) begin
-			input_index = 0;
+	always @( posedge clk ) begin
+		if (rst) begin
+            _reset <= 0;
+            _next_out <= 0;
+            _prev_out <= 0;
+			k <= 0;
+			j <= 0;
+			i <= 0;
 		end 
 		else begin
 		
@@ -136,9 +151,9 @@ module basys (
 		
 			if (nxt) begin
 			
-			     if (k == maxpool_size_2 - 1) begin
-			         if (j == maxpool_size_2 - 1) begin
-			             if (i == out_channels_2 - 1) begin
+			     if (k == out_size - 1) begin
+			         if (j == out_size - 1) begin
+			             if (i == out_channels - 1) begin
 			                 //do nothing
 			             end else begin
 			                 i <= i + 1;
@@ -162,12 +177,12 @@ module basys (
 			                 //do nothing
 			             end else begin
 			                 i <= i - 1;
-			                 j <= maxpool_size_2 - 1;
-			                 k <= maxpool_size_2 - 1;
+			                 j <= out_size - 1;
+			                 k <= out_size - 1;
 			             end
 			         end else begin
 			             j <= j - 1;
-			             k <= maxpool_size_2 - 1;
+			             k <= out_size - 1;
 			         end
 			     end else begin
 			         k <= k - 1;

@@ -1,17 +1,17 @@
-module debounce (clk, in, out);
+module debounce #(parameter cycles = 16) (clk, in, out);
 
 	input clk, in;
 	output out;
 
-	reg [15:0] d;
+	reg signed [cycles-1:0] d;
 
-	assign out = d == 16'hffff;
+	assign out = d == -1;
 
 	initial d = 0;
 
 	always @( posedge clk ) begin
-		d[15:1] <= d[14:0];
-		d[0] <= in;
+		d[cycles-1:1] = d[cycles-2:0];
+		d[0] = in;
 	end
 
 endmodule
