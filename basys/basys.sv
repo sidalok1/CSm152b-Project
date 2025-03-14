@@ -20,7 +20,7 @@ module basys (
 		end end end
 	endgenerate
 	
-	wire [`DATA_SIZE-1:0] conv_out [0:out_channels-1][0:out_size-1][0:out_size-1];
+	wire [`DATA_SIZE-1:0] conv1_out [0:out_channels-1][0:out_size-1][0:out_size-1];
     
 	conv2d #(
 		in_channels,
@@ -34,7 +34,7 @@ module basys (
 		in_size,
 		in_size,
 		`DATA_SIZE
-	) UUT ( .in(current_input), .out(conv_out) );
+	) conv1 ( .in(current_input), .out(conv1_out) );
 
 	
 
@@ -42,7 +42,7 @@ module basys (
 
 	wire [7:0] conv_to_display;
 
-	assign conv_to_display = conv_out[i][j][k];
+	assign conv_to_display = conv1_out[i][j][k];
 
 	wire d_clk;
 
@@ -55,13 +55,13 @@ module basys (
 	debounce 
 		bC (clk, btnC, reset),
 		bL (clk, btnL, prev_in),
-		bU (clk, btnU, next_out),
+		bU (clk, btnU, prev_out),
 		bR (clk, btnR, next_in),
-		bD (clk, btnD, prev_out);
+		bD (clk, btnD, next_out);
 
 	initial begin
-		$readmemh("./mem/in.mem", inputs);
-		$readmemh("./mem/kern.mem", UUT.kernels);
+		$readmemh("in.mem", inputs);
+		$readmemh("kern.mem", conv1.kernels);
 		i = 0;
 		j = 0;
 		k = 0;
@@ -73,12 +73,12 @@ module basys (
 			input_index = 0;
 		end 
 		else begin
-			if (next_in && (input_index < number_of_inputs))
+			if (next_in && (input_index < number_of_inputs - 1))
 				input_index = input_index + 1;
 			else if (prev_in && (input_index > 0))
 				input_index = input_index - 1;
 			
-			if (next_out)
+			if (next_out) begin
 				if (k < out_size - 1)
 					k = k + 1;
 				else if (j < out_size - 1) begin
@@ -90,18 +90,20 @@ module basys (
 					j = 0;
 					i = i + 1;
 				end
-			else if (prev_out)
+			end
+			else if (prev_out) begin
 				if (k > 0)
-					k = k + 1;
+					k = k - 1;
 				else if (j > 0) begin
 					k = out_size - 1;
-					j = j + 1;
+					j = j - 1;
 				end
 				else if (i > 0) begin
 					k = out_size - 1;
 					j = out_size - 1;
-					i = i + 1;
+					i = i - 1;
 				end
+			end
 		end
 	end
 

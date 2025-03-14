@@ -42,13 +42,12 @@ module conv2d
 	endgenerate
 
 	generate
-		for (ci = 0; ci < in_channels;  ci = ci + 1) begin:kern_input_channels
-		for (co = 0; co < out_channels; co = co + 1) begin:kern_output_channels
-		for (i = 0; i < kernel_rows; i = i + 1) begin:kern_row
-		for (j = 0; j < kernel_cols; j = j + 1) begin:kern_col
-				wire [data_size-1:0] kern;
-				assign kern = kernels[ci][co] [i][j];
-		end end end end
+		for (co = 0; co < out_channels; co = co + 1) begin:out_output_channels
+		for (i = 0; i < output_rows; i = i + 1) begin:out_row
+		for (j = 0; j < output_cols; j = j + 1) begin:out_col
+				wire [data_size-1:0] outp;
+				assign outp = out[co] [i][j];
+		end end end
 
 		for (ci = 0; ci < in_channels;  ci = ci + 1) begin:in_input_channels
 		for (i = 0; i < rows; i = i + 1) begin:in_row
@@ -82,6 +81,33 @@ module conv2d
 				current = biases[cidx][cjdx];
 				for (kjdx = kernel_rows - 1; kjdx >= 0; kjdx = kjdx - 1) begin
 				for (kidx = kernel_cols - 1; kidx >= 0; kidx = kidx - 1) begin
+						$display("\t%d * %d", padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx], kernels[cidx][cjdx][kjdx][kidx]);
+						current = current + 
+							padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx] 
+								* 
+							kernels[cidx][cjdx] [kjdx][kidx];
+				end end
+				out[cjdx][jdx][idx] = current;
+				$display("\t\t Value: %d", current);
+			end	end
+		end end
+	end
+
+endmodule
+
+/*
+always @* begin
+		for (cjdx = 0; cjdx < out_channels; cjdx = cjdx + 1) begin
+			$display("Output channel: %d", cjdx);
+		for (cidx = 0; cidx < in_channels;  cidx = cidx + 1) begin
+			$display("Input channel: %d", cidx);
+			for (jdx = 0; jdx < output_rows; jdx = jdx + 1) begin
+				$display("\tRow: %d", jdx);
+			for (idx = 0; idx < output_cols; idx = idx + 1) begin
+				$display("\tCol: %d", idx);
+				current = biases[cidx][cjdx];
+				for (kjdx = 0; kjdx < kernel_rows; kjdx = kjdx + 1) begin
+				for (kidx = 0; kidx < kernel_cols; kidx = kidx + 1) begin
 						$display("\t%d * %d", padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx], kernels[cidx][cjdx][(kernel_rows-1)-kjdx][(kernel_cols-1)-kidx]);
 						current = current + 
 							padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx] 
@@ -93,5 +119,4 @@ module conv2d
 			end	end
 		end end
 	end
-
-endmodule
+*/
