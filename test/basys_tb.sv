@@ -12,7 +12,7 @@ module basys_tb ();
 		{clk, bC, bL, bU, bR, bD} = 0;
 		#400 bD = 1; #400 bD = 0;
 		for (i = 0; i < 2; i++) begin
-		#400 bU = 1; #400 bU = 0;
+		#4000 bU = 1; #4000 bU = 0;
 		end
 		for (i = 0; i < 5; i++) begin
 		#400 bR = 1; #400 bR = 0;
@@ -26,6 +26,6 @@ module basys_tb ();
 		for (i = 0; i < 10; i++) begin
 		#400 bU = 1; #400 bU = 0;
 		end
-		#400 $finish();
+
 	end
 endmodule
