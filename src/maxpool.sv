@@ -1,18 +1,22 @@
-module conv2d 
+module maxpool 
 	#(parameter
 		in_channels=1,
-		out_channels=1,
-		kernel_rows=1,
-		kernel_cols=1,
-		stride_row=1,
-		stride_col=1,
+		kernel_rows=2,
+		kernel_cols=2,
+		stride_row=2,
+		stride_col=2,
 		pad_rows=0,
 		pad_cols=0,
-		rows=28,
-		cols=28,
+		rows=27,
+		cols=27,
 		data_size=8
-	) (in, out);
-
+	)
+	(
+		in,
+		out
+	);
+    localparam out_channels = in_channels;
+    
 	input wire signed [data_size-1:0] in [0:in_channels-1][0:rows-1][0:cols-1];
 
 	localparam output_rows = 
@@ -21,13 +25,9 @@ module conv2d
 		(cols - kernel_cols + pad_cols + stride_col) / stride_col;
 	output reg signed [data_size-1:0] out [0:out_channels-1][0:output_rows-1][0:output_cols-1];
 
-	genvar i, j, ci, co, ki, kj;
+	genvar i, j, ci, co;
 	generate
 		
-		reg signed [data_size-1:0] kernels [0:in_channels-1][0:out_channels-1][0:kernel_rows-1][0:kernel_cols-1];
-
-		reg [data_size-1:0] biases [0:out_channels-1];
-
 		wire signed [data_size-1:0] padded_inputs [0:in_channels-1][0:(rows + (2 * pad_rows))-1][0:(cols + (2 * pad_cols))-1];
 
 		for (ci = in_channels - 1; ci >= 0; ci = ci - 1) begin
@@ -41,32 +41,11 @@ module conv2d
 		end
 	endgenerate
 
-	generate
-		for (co = 0; co < out_channels; co = co + 1) begin:out_output_channels
-		for (i = 0; i < output_rows; i = i + 1) begin:out_row
-		for (j = 0; j < output_cols; j = j + 1) begin:out_col
-				wire [data_size-1:0] outp;
-				assign outp = out[co] [i][j];
-		end end end
-
-		for (ci = 0; ci < in_channels;  ci = ci + 1) begin:in_input_channels
-		for (i = 0; i < rows; i = i + 1) begin:in_row
-		for (j = 0; j < cols; j = j + 1) begin:in_col
-				wire [data_size-1:0] inp;
-				assign inp = in[ci][i][j];
-		end end end
-	endgenerate
-
 	integer idx, cidx, kidx,
-			jdx, cjdx, kjdx;
+			jdx, cjdx, kjdx,
+			ind;
 
 	reg signed [(data_size*2)-1:0] current;
-
-	initial begin
-		for (jdx = 0; jdx < out_channels; jdx = jdx + 1) begin
-			biases[idx][jdx] = 0;
-		end 
-	end
 
 	always @* begin
 		for (cjdx = out_channels - 1; cjdx >= 0; cjdx = cjdx - 1) begin
@@ -77,14 +56,14 @@ module conv2d
 				$display("\tRow: %d", jdx);
 			for (idx = output_cols - 1; idx >= 0; idx = idx - 1) begin
 				$display("\tCol: %d", idx);
-				current = biases[cjdx];
+				ind = (((cjdx * (output_rows * output_cols)) + (jdx * (output_rows)) + idx)	* data_size) + data_size - 1;
+				current = 0;
 				for (kjdx = kernel_rows - 1; kjdx >= 0; kjdx = kjdx - 1) begin
 				for (kidx = kernel_cols - 1; kidx >= 0; kidx = kidx - 1) begin
-						$display("\t%d * %d", padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx], kernels[cidx][cjdx][kjdx][kidx]);
-						current = current + 
-							padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx] 
-								* 
-							kernels[cidx][cjdx] [kjdx][kidx];
+						$display("\t%d > %d?", padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx], current);
+                        if (padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx] > current) begin
+                            current = padded_inputs[cidx][(jdx * stride_row) + kjdx][(idx * stride_col) + kidx];
+                        end
 				end end
 				out[cjdx][jdx][idx] = current;
 				$display("\t\t Value: %d", current);
@@ -93,4 +72,3 @@ module conv2d
 	end
 
 endmodule
-

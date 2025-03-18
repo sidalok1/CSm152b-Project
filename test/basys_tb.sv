@@ -26,9 +26,6 @@ module basys_tb ();
 		for (i = 0; i < 10; i++) begin
 		#40 bU = 1; #40 bU = 0;
 		end
-
-		
-
-		#40 $finish();
+		#400 $finish();
 	end
 endmodule
