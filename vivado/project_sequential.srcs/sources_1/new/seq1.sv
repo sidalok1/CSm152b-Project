@@ -18,59 +18,58 @@
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
-`define WAIT_IDLE 0
-`define WAIT_READ 1
-`define WAIT_CONV 2
 
-module seq1(clk, start, finished, conv1_to);
+`define CONV 2
+
+module seq1(clk, start, finished, seq1_out);
     input clk;
     input start;
-    output reg finished;
+    output wire finished;
     
-    reg start_input;
-    wire input_finished;
+    reg start_input, start_conv1;
+    wire input_finished, conv1_finished;
     wire signed [7:0] in_to_conv1 [0:27][0:27];
-    in_mat input_matrix(clk, start_input, input_finished, in_to_conv1);
+    wire signed [7:0] conv1_to_relu [0:15][0:25][0:25];
+    wire signed [7:0] relu_to_maxpool [0:15][0:25][0:25];
+    output wire signed [7:0] seq1_out [0:15][0:12][0:12];
     
-    reg start_conv1;
-    wire conv1_finished;
-    output wire signed [7:0] conv1_to [0:15][0:25][0:25];
-    conv1 conv_1 (clk, start_conv1, in_to_conv1, conv1_finished, conv1_to);
-     
+    in_mat input_matrix(clk, start_input, input_finished, in_to_conv1);
+    conv1 conv_1 (clk, start_conv1, in_to_conv1, conv1_finished, conv1_to_relu);
+    relu1 relu (conv1_to_relu, relu_to_maxpool);
+    maxpool1 maxpool (relu_to_maxpool, seq1_out);
+    
     reg [1:0] state;
+    assign finished = state == `IDLE;
     
     initial begin
-        state = `WAIT_IDLE;
-        finished = 1;
+        state = `IDLE;
         start_input = 0;
         start_conv1 = 0;
     end
     
     always @( clk ) begin
         case (state)
-            `WAIT_IDLE: begin
+            `IDLE: begin
                 if (start) begin
-                    finished <= 0;
                     start_input <= 1;
-                    state <= `WAIT_READ;
+                    state <= `READ;
                 end
             end
-            `WAIT_READ: begin
+            `READ: begin
                 if (start_input) begin
                     start_input <= 0;
                 end
                 else if (input_finished) begin
-                    state <= `WAIT_CONV;
+                    state <= `CONV;
                     start_conv1 <= 1;
                 end
             end
-            `WAIT_CONV: begin
+            `CONV: begin
                 if (start_conv1) begin
                     start_conv1 <= 0;
                 end
                 else if (conv1_finished) begin
-                    state <= `WAIT_IDLE;
-                    finished <= 1;
+                    state <= `IDLE;
                 end
             end
         endcase

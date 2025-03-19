@@ -24,12 +24,12 @@ module tb();
 
     reg s = 0;
     wire f;
-    wire [7:0] outmat [0:15][0:25][0:25];
+    wire signed [7:0] outmat [0:31][0:4][0:4];
     reg clk = 0;
     
     always #0.5 clk = ~clk;
     
-    seq1 UUT (clk, s, f, outmat);
+    mnist UUT (clk, s, f, outmat);
     
     initial begin
         #5 s = 1;
